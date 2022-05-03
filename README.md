@@ -13,36 +13,38 @@ $ mvn install -DskipTests -Dgpg.skip
 
 ## Plugin parameters
 
+Common prefix: `spark.plugins.internal.conf.com.attilapiros.profiler.AsyncProfilerPlugin`.
 
-### `spark.plugins.internal.conf.com.attilapiros.profiler.AsyncProfilerPlugin.nativeLibPath`
+
+### `nativeLibPath`
 
 Specifies the location of the `libasyncProfiler.so` which is the profiler implementation.
 Its default is `libasyncProfiler.so` so when `libasyncProfiler.so` is added with the `--files`
 this parameter can be omitted.
 
-### `spark.plugins.internal.conf.com.attilapiros.profiler.AsyncProfilerPlugin.startCmd`
+### `startCmd`
 
 Specifies the command to start the profiler without the output file part.
 Output file with the separating `,` is added by using the
 `spark.plugins.internal.conf.com.attilapiros.profiler.AsyncProfilerPlugin.outputFileTemplate`
 parameter (see later).
 
-### `spark.plugins.internal.conf.com.attilapiros.profiler.AsyncProfilerPlugin.stopCmd`
+### `stopCmd`
 
 Specifies the command to stop the profiler.
 
-### `spark.plugins.internal.conf.com.attilapiros.profiler.AsyncProfilerPlugin.outputFileTemplate`
+### `outputFileTemplate`
 
 Specifies the output file template which should contain a `%s` part where depending on profiling mode
 either the Spark Task ID or the Stage Id along with the attempt number will be added.
 
-### `spark.plugins.internal.conf.com.attilapiros.profiler.AsyncProfilerPlugin.isStageMode`
+### `isStageMode`
 
 Specifies the profiling mode.
 When this is `true` then only stages are profiled separately and not the tasks.
 Its default is `false`.
 
-### `spark.plugins.internal.conf.com.attilapiros.profiler.AsyncProfilerPlugin.filterForStages`
+### `filterForStages`
 
 Specifies the stages where the profiling is active for both stage level and task level profiling.
 
