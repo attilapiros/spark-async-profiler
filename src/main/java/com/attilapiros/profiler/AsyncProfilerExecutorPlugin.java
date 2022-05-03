@@ -158,8 +158,12 @@ class StageLevelProfiler extends ProfilerStrategy {
             String fullStartCmd = startCmd + formattedOutputFile;
             logger.info("fullStartCmd: {}", fullStartCmd);
             asyncProfiler.execute(fullStartCmd);
+            stageId = taskContext.stageId();
+            stageAttemptNumber = taskContext.stageAttemptNumber();
           } catch (IOException ie) {
             formattedOutputFile = null;
+            stageId = -1;
+            stageAttemptNumber = -1;
           }
         }
     }
@@ -187,7 +191,7 @@ public class AsyncProfilerExecutorPlugin implements ExecutorPlugin {
   public void init(PluginContext ctx, java.util.Map<String,String> extraConf) {
     logger.info("AsyncProfilerExecutorPlugin initialization with extraConf: " + extraConf);
     try {
-      final String nativeLibPath = extraConf.get(ParamKeys.NATIVE_LIB_PATH);
+      final String nativeLibPath = extraConf.getOrDefault(ParamKeys.NATIVE_LIB_PATH, "libasyncProfiler.so");
       final String fullNativeLibPath;
       final File f = new File(nativeLibPath);
       if (f.exists()) {
