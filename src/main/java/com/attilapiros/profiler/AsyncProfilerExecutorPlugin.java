@@ -2,6 +2,7 @@ package com.attilapiros.profiler;
 
 import java.io.IOException;
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,6 +12,7 @@ import java.util.Set;
 
 import org.apache.spark.api.plugin.ExecutorPlugin;
 import org.apache.spark.api.plugin.PluginContext;
+import org.apache.spark.SparkFiles;
 import org.apache.spark.TaskFailedReason;
 import org.apache.spark.TaskContext;
 
@@ -24,9 +26,7 @@ interface ParamKeys {
   // path of libasyncProfiler.so
   String NATIVE_LIB_PATH = "nativeLibPath";
 
-  // optional value if empty not used at all! like: "/tmp/asyncProfiler/profile_%s.jfr" where
-  // %d will be the actual taskAttemptId, if relative path is given then filew will be stored in the executors local directories
-  String OUTPUTFILE_TEMPLATE = "outputFileTemplate";
+  String OUTPUTFILE_EXT = "outputFileExt";
 
   // example: "start,event=cpu"
   String PROFILE_START_COMMAND = "startCmd";
@@ -144,7 +144,7 @@ class StageLevelProfiler extends ProfilerStrategy {
   public void onTaskStart() {
       TaskContext taskContext = TaskContext.get();
       if (stageId != taskContext.stageId() || stageAttemptNumber != taskContext.stageAttemptNumber()) {
-        if (stageId != -1) {
+        if (formattedOutputFile != null) {
           stopProfilerWriteRecording(formattedOutputFile);
           formattedOutputFile = null;
         }
@@ -197,12 +197,11 @@ public class AsyncProfilerExecutorPlugin implements ExecutorPlugin {
       if (f.exists()) {
         fullNativeLibPath = f.getAbsolutePath();
       } else {
-        fullNativeLibPath = Paths.get(".").resolveSibling(nativeLibPath).toAbsolutePath().toString();
+        fullNativeLibPath = SparkFiles.get(nativeLibPath).toString();
       }
       AsyncProfiler asyncProfiler = AsyncProfiler.getInstance(fullNativeLibPath);
       String startCmd = extraConf.getOrDefault(ParamKeys.PROFILE_START_COMMAND, "start,event=cpu");
       String stopCmd = extraConf.getOrDefault(ParamKeys.PROFILE_STOP_COMMAND, "stop");
-      String outputFileTemplate = extraConf.getOrDefault(ParamKeys.OUTPUTFILE_TEMPLATE, "/tmp/asyncProfiler/profile_%s.jfr");
       String filterForStagesOneStr = extraConf.getOrDefault(ParamKeys.FILTER_FOR_STAGES, "");
       final Set<Integer> filterForStages;
       if (filterForStagesOneStr.isEmpty()) {
@@ -210,7 +209,9 @@ public class AsyncProfilerExecutorPlugin implements ExecutorPlugin {
       } else {
         filterForStages = new HashSet<Integer>(Arrays.stream(filterForStagesOneStr.split(",")).mapToInt(Integer::parseInt).collect(ArrayList::new,ArrayList::add,ArrayList::addAll));
       }
-      logger.info("filterForStages: " + filterForStages);
+      String tmpDir = Files.createTempDirectory(ctx.conf().getAppId() + "_").toFile().getAbsolutePath();
+      logger.info("Creating directory '{}' for the JVM profiles", tmpDir);
+      String outputFileTemplate = tmpDir + "/" + "jvmprofile_%s" + extraConf.getOrDefault(ParamKeys.OUTPUTFILE_EXT, ".jfr");
       if (Boolean.parseBoolean(extraConf.getOrDefault(ParamKeys.STAGE_MODE, "false"))) {
         profilerStrategy = new StageLevelProfiler(asyncProfiler, startCmd, stopCmd, outputFileTemplate, filterForStages);
       } else {
